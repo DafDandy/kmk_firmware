@@ -64,6 +64,9 @@ dockerbase:
 lint: devdeps
 	@$(PIPENV) run flake8
 
+spellcheck:
+	./util/spellcheck.sh --no-interactive
+
 fix-formatting: devdeps
 	@$(PIPENV) run black .
 
@@ -92,7 +95,11 @@ test: lint unit-tests
 
 .PHONY: unit-tests
 unit-tests: devdeps
+ifdef TESTS
 	@$(PIPENV) run python3 -m unittest $(TESTS)
+else
+	@$(PIPENV) run python3 -m unittest discover -t . -s tests
+endif # TESTS
 
 reset-bootloader:
 	@echo "===> Rebooting your board to bootloader (safe to ignore file not found errors)"

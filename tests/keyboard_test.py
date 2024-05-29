@@ -1,12 +1,14 @@
+import digitalio
+
 import time
 from unittest.mock import Mock, patch
 
+from kmk import scheduler
 from kmk.hid import HIDModes
 from kmk.keys import KC, ModifierKey
 from kmk.kmk_keyboard import KMKKeyboard
 from kmk.scanners import DiodeOrientation
 from kmk.scanners.digitalio import MatrixScanner
-from kmk.scheduler import _task_queue
 
 
 class DigitalInOut(Mock):
@@ -50,9 +52,12 @@ class KeyboardTest:
         self.keyboard.matrix = MatrixScanner(
             cols=self.keyboard.col_pins,
             rows=self.keyboard.row_pins,
+            pull=digitalio.Pull.DOWN,
             diode_orientation=self.keyboard.diode_orientation,
         )
         self.keyboard.keymap = keymap
+
+        scheduler._task_queue = scheduler.TaskQueue()
 
         self.keyboard._init(hid_type=HIDModes.NOOP)
 
@@ -82,7 +87,7 @@ class KeyboardTest:
         timeout = time.time_ns() + 10 * 1_000_000_000
         while timeout > time.time_ns():
             self.do_main_loop()
-            if not _task_queue.peek() and not self.keyboard._resume_buffer:
+            if not scheduler._task_queue.peek() and not self.keyboard._resume_buffer:
                 break
         assert timeout > time.time_ns(), 'infinite loop detected'
 
@@ -92,8 +97,8 @@ class KeyboardTest:
             try:
                 hid_report = hid_reports[i]
             except IndexError:
-                report_mods = None
-                report_keys = [None]
+                report_mods = 0
+                report_keys = set()
             else:
                 report_mods = hid_report[0]
                 report_keys = {code for code in hid_report[2:] if code != 0}
